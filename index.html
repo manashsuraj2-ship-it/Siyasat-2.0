@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Country Simulator - Persistent Chat & Working Admin Tax</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #0a2a1a 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .game-header {
+            background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ffd700 100%);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 3px solid #8b4513;
+        }
+
+        .game-header h1 {
+            color: #2c1810;
+            font-size: 2em;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            background: #2c1810;
+            flex-wrap: wrap;
+        }
+
+        .nav button {
+            background: #ffd700;
+            color: #2c1810;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .nav button:hover, .nav button.active {
+            background: #ff8c00;
+            transform: scale(1.05);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ffd700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.5);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-box h3 {
+            color: #ffd700;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-value.coins {
+            color: #ffd700;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(0,0,0,0.6);
+            border-radius: 15px;
+            padding: 18px;
+            border: 1px solid #ffd700;
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .btn-upgrade, .btn-build, .btn-train, .btn-resolve {
+            background: #ffd700;
+            color: #2c1810;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .btn-attack {
+            background: #dc3545;
+            color: white;
+        }
+
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .market-card {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #ffd700;
+        }
+
+        .war-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .war-message {
+            padding: 5px;
+            border-bottom: 1px solid rgba(255,215,0,0.2);
+            font-size: 12px;
+        }
+
+        .war-message.win { color: #4caf50; }
+        .war-message.loss { color: #ff6b6b; }
+
+        .leaders-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .leader-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .admin-login {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .admin-login input {
+            padding: 12px;
+            width: 280px;
+            margin: 10px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .error-msg { color: #ff6b6b; margin-top: 10px; }
+        .success-msg { color: #51cf66; margin-top: 10px; }
+
+        .chat-container {
+            background: rgba(0,0,0,0.6);
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .chat-message {
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .chat-message.sent {
+            background: #ffd700;
+            color: #2c1810;
+            align-self: flex-end;
+        }
+
+        .chat-message.received {
+            background: rgba(255,255,255,0.15);
+            align-self: flex-start;
+        }
+
+        .message-sender {
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .message-time {
+            font-size: 0.65em;
+            margin-top: 4px;
+            opacity: 0.6;
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            gap: 10px;
+            border-top: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.4);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .chat-input-area button {
+            background: #ffd700;
+            color: #2c1810;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a472a, #0a2a1a);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-box {
+            background: rgba(0,0,0,0.85);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid #ffd700;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .auth-box h2 { color: #ffd700; margin-bottom: 20px; }
+        .auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .auth-tab { flex: 1; background: rgba(255,255,255,0.1); border: none; padding: 10px; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; }
+        .auth-tab.active { background: #ffd700; color: #2c1810; }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .auth-form input { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: white; }
+        .auth-form button { background: #ffd700; color: #2c1810; padding: 12px 30px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; }
+
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .timer { font-size: 0.85em; color: #ffd700; margin-top: 5px; }
+        .market-timer { background: #2c1810; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        .footer { text-align: center; padding: 15px; background: #2c1810; margin-top: 30px; }
+        .tax-control { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #ffd700; }
+        .challenge-item { background: rgba(0,0,0,0.5); border-left: 5px solid #ff4444; padding: 15px; margin-bottom: 15px; border-radius: 10px; }
+        .challenge-timer { color: #ffaa00; font-size: 0.9em; margin: 8px 0; }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-4 { grid-template-columns: 1fr; }
+            .nav button { padding: 5px 10px; font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-box">
+            <h2>🏭 Country Simulator</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+            </div>
+            <div id="loginForm" class="auth-form active">
+                <input type="text" id="loginCountry" placeholder="Country Name">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button onclick="loginUser()">Login</button>
+                <div id="loginMessage"></div>
+            </div>
+            <div id="signupForm" class="auth-form">
+                <input type="text" id="signupCountry" placeholder="Country Name">
+                <input type="password" id="signupPassword" placeholder="Password">
+                <button onclick="signupUser()">Sign Up</button>
+                <div id="signupMessage"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="gameUI" style="display: none;">
+        <div class="game-header">
+            <h1>🏭 Country Simulator</h1>
+            <p>Build | Produce | Trade | Army | Conquer | Help Allies | Face Crises</p>
+        </div>
+
+        <div class="nav">
+            <button onclick="showView('dashboard')" id="dashboardNav" class="active">📊 Dashboard</button>
+            <button onclick="showView('buildings')" id="buildingsNav">🏭 Buildings</button>
+            <button onclick="showView('inventory')" id="inventoryNav">📦 Inventory</button>
+            <button onclick="showView('market')" id="marketNav">📈 Market</button>
+            <button onclick="showView('army')" id="armyNav">⚔️ Army</button>
+            <button onclick="showView('loan')" id="loanNav">💰 Loans</button>
+            <button onclick="showView('war')" id="warNav">⚡ War</button>
+            <button onclick="showView('leaders')" id="leadersNav">🏆 Leaders</button>
+            <button onclick="showView('help')" id="helpNav">🤝 Help</button>
+            <button onclick="showView('chat')" id="chatNav">💬 Chat</button>
+            <button onclick="showView('challenges')" id="challengesNav">⚠️ Challenges</button>
+            <button onclick="showView('alliance')" id="allianceNav">🤝 Alliance</button>
+            <button onclick="showView('admin')" id="adminNav">👑 Admin</button>
+        </div>
+
+        <div class="container">
+            <!-- Dashboard -->
+            <div id="dashboard" class="view active">
+                <div class="stats-card">
+                    <h2>📊 Your Country Stats</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box"><h3>💰 Treasury</h3><div class="stat-value coins" id="displayCoins">0</div></div>
+                        <div class="stat-box"><h3>🏭 Buildings</h3><div class="stat-value" id="displayBuildings">0</div></div>
+                        <div class="stat-box"><h3>⚔️ Army Size</h3><div class="stat-value" id="displayArmy">0</div></div>
+                        <div class="stat-box"><h3>📦 Total Materials</h3><div class="stat-value" id="displayMaterials">0</div></div>
+                        <div class="stat-box"><h3>💰 Prod/Hour</h3><div class="stat-value" id="displayProduction">0</div></div>
+                        <div class="stat-box"><h3>⚡ Military Power</h3><div class="stat-value" id="displayPower">0</div></div>
+                        <div class="stat-box"><h3>💸 Loan Debt</h3><div class="stat-value warning-text" id="displayLoan">0</div></div>
+                        <div class="stat-box"><h3>⏳ War Cooldown</h3><div class="stat-value" id="warCooldown">Ready</div></div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <h2>⏰ Production Cycle (Every Hour)</h2>
+                    <div id="productionTimer" class="timer" style="font-size: 1.5em; text-align: center;"></div>
+                    <button onclick="collectProduction()" style="margin-top: 10px; width: 100%;">🏭 Collect Materials Now</button>
+                </div>
+                <div class="stats-card">
+                    <h2>📜 War Log</h2>
+                    <div id="warLog" class="war-log"></div>
+                </div>
+            </div>
+
+            <div id="buildings" class="view"><div class="stats-card"><h2>🏭 Buildings</h2><div id="buildingsList" class="grid-4"></div></div></div>
+            <div id="inventory" class="view"><div class="stats-card"><h2>📦 Inventory</h2><div id="inventoryList" class="grid-4"></div></div></div>
+            <div id="market" class="view"><div class="stats-card"><h2>📈 Global Market</h2><div class="market-timer"><div id="marketTimer" class="timer"></div></div><div id="marketGrid" class="market-grid"></div></div></div>
+            <div id="army" class="view"><div class="stats-card"><h2>⚔️ Army</h2><div id="armyList" class="grid-4"></div></div></div>
+            <div id="loan" class="view"><div class="stats-card"><h2>💰 Loans</h2><div class="card"><input type="number" id="loanAmount" placeholder="Amount"><input type="number" id="loanDays" placeholder="Days"><div id="loanPreview"></div><button onclick="takeLoan()">Take Loan</button><div id="loanStatus"></div></div><div id="activeLoansList"></div></div></div>
+            <div id="war" class="view"><div class="stats-card"><h2>⚡ Declare War</h2><div id="attackList" class="leaders-list"></div></div></div>
+            <div id="leaders" class="view"><div class="stats-card"><h2>🏆 Richest Countries</h2><div id="leadersList" class="leaders-list"></div></div></div>
+
+            <!-- HELP TAB -->
+            <div id="help" class="view">
+                <div class="stats-card">
+                    <h2>🤝 Send Help to Other Countries</h2>
+                    <div class="card">
+                        <select id="helpCountrySelect" style="width:100%; padding:10px; margin:10px 0; background:rgba(0,0,0,0.5); color:white; border:1px solid #ffd700;"></select>
+                        <select id="helpResourceType" style="width:100%; padding:10px; margin:10px 0; background:rgba(0,0,0,0.5); color:white; border:1px solid #ffd700;" onchange="updateHelpResourceLabel()">
+                            <option value="coins">Coins</option>
+                            <option value="wood">🪵 Wood</option>
+                            <option value="iron">⛏️ Iron Ore</option>
+                            <option value="food">🌾 Food</option>
+                            <option value="stone">🪨 Stone</option>
+                            <option value="steel">🏭 Steel</option>
+                            <option value="oil">🛢️ Oil</option>
+                            <option value="ammo">🔫 Ammo</option>
+                            <option value="electronics">💻 Electronics</option>
+                        </select>
+                        <input type="number" id="helpQuantity" placeholder="Quantity" style="width:100%; padding:10px; margin:10px 0; background:rgba(0,0,0,0.5); color:white; border:1px solid #ffd700;">
+                        <div id="helpResourceInfo" style="font-size:12px; color:#ffd700;"></div>
+                        <button onclick="sendHelp()" style="background:#28a745; width:100%;">🚀 Send Help</button>
+                        <div id="helpStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHAT TAB - PERSISTENCE -->
+            <div id="chat" class="view">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div style="text-align:center; opacity:0.6;">Loading messages...</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALLIANCE TAB -->
+            <div id="alliance" class="view">
+                <div class="stats-card">
+                    <h2>🤝 Alliance System</h2>
+                    <div id="currentAllianceDisplay" style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                        <!-- Current alliance info loaded dynamically -->
+                    </div>
+                    <div class="grid-4">
+                        <div class="card">
+                            <h3>🏛️ Create Alliance</h3>
+                            <input type="text" id="newAllianceName" placeholder="Alliance Name" style="width:100%; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.5); border:1px solid #ffd700; color:white;">
+                            <button onclick="createAlliance()" style="background:#ffd700; color:#2c1810;">⭐ Create Alliance</button>
+                            <div id="createAllianceMsg" class="error-msg" style="font-size:12px;"></div>
+                        </div>
+                        <div class="card">
+                            <h3>🔗 Join Alliance</h3>
+                            <input type="text" id="joinAllianceName" placeholder="Alliance Name" style="width:100%; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.5); border:1px solid #ffd700; color:white;">
+                            <button onclick="joinAlliance()" style="background:#ffd700; color:#2c1810;">🤝 Join Alliance</button>
+                            <div id="joinAllianceMsg" class="error-msg" style="font-size:12px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="challenges" class="view"><div class="stats-card"><h2>⚠️ Active Crises</h2><div id="activeChallengesList" class="leaders-list"></div></div></div>
+
+            <!-- Admin Panel -->
+            <div id="admin" class="view">
+                <div class="stats-card">
+                    <h2>👑 Admin Panel</h2>
+                    <div id="adminLoginPanel" class="admin-login">
+                        <input type="password" id="adminPassword" placeholder="Admin Password">
+                        <button onclick="loginAdmin()">Login</button>
+                        <div id="adminLoginError"></div>
+                    </div>
+                    <div id="adminPanel" class="admin-panel">
+                        <h3>📋 All Nations (Live)</h3>
+                        <div id="adminNationsList" class="leaders-list"></div>
+                        <h3>💰 Give Resources</h3>
+                        <select id="adminCountrySelect"></select>
+                        <input type="number" id="adminCoins" placeholder="Coins">
+                        <select id="adminMaterialSelect">
+                            <option value="">-- Material --</option>
+                            <option value="wood">Wood</option><option value="iron">Iron</option><option value="food">Food</option>
+                            <option value="stone">Stone</option><option value="steel">Steel</option><option value="oil">Oil</option>
+                            <option value="ammo">Ammo</option><option value="electronics">Electronics</option>
+                        </select>
+                        <input type="number" id="adminMaterialQty" placeholder="Material Qty">
+                        <button onclick="adminGiveResources()">Give</button>
+                        <h3>⚔️ Add Army</h3>
+                        <select id="adminArmyCountry"></select><select id="adminArmyUnit"><option value="soldier">Soldier</option><option value="tank">Tank</option><option value="artillery">Artillery</option></select><input id="adminArmyQty" placeholder="Qty"><button onclick="adminAddArmy()">Add</button>
+                        <h3>🗑️ Remove Nation</h3>
+                        <select id="adminRemoveCountry"></select><button onclick="adminRemoveNation()" class="danger-btn" style="background:#dc3545;color:white;">Delete</button>
+                        <h3>🔥 Trigger Challenge</h3>
+                        <select id="adminChallengeCountry"></select><select id="adminChallengeType"><option value="terrorist_attack">Terrorist Attack</option><option value="industrial_blockade">Industrial Blockade</option><option value="cyber_attack">Cyber Attack</option></select><button onclick="adminTriggerChallenge()">Trigger</button>
+                        <h3>💰 Tax Management</h3>
+                        <div class="tax-control">
+                            <label>Tax Percentage (0-100)%</label>
+                            <input type="number" id="taxPercentage" min="0" max="100" step="1" value="10">
+                            <button onclick="applyTaxToAll()" style="background:#dc3545; color:white;">💸 Deduct Tax from ALL Nations</button>
+                            <div id="taxStatus"></div>
+                        </div>
+                        <h3 style="color:#ff4444;">⚠️ DANGER ZONE</h3>
+                        <button onclick="confirmResetDatabase()" style="background:#ff0000; color:white; width:100%; padding:10px;">🔥 RESET DATABASE (Clear ALL) 🔥</button>
+                        <div id="adminStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer"><p>🏭 Country Simulator | Build | Trade | War | Help | Challenges | Alliances</p></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase Config (unchanged)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOrU6drresdNYZa22f83zeTFw0OF78zOk",
+            authDomain: "tic-tac-toe-75570.firebaseapp.com",
+            databaseURL: "https://tic-tac-toe-75570-default-rtdb.firebaseio.com",
+            projectId: "tic-tac-toe-75570",
+            storageBucket: "tic-tac-toe-75570.firebasestorage.app",
+            messagingSenderId: "1035231646052",
+            appId: "1:1035231646052:web:4b3c60f29285498cc32a71"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Game Data (unchanged)
+        const buildingsList = {
+            woodcutter: { name: "🪵 Woodcutter", material: "wood", materialName: "Wood", baseProduction: 10, cost: 100 },
+            mine: { name: "⛏️ Iron Mine", material: "iron", materialName: "Iron Ore", baseProduction: 5, cost: 250 },
+            farm: { name: "🌾 Farm", material: "food", materialName: "Food", baseProduction: 15, cost: 150 },
+            quarry: { name: "🪨 Quarry", material: "stone", materialName: "Stone", baseProduction: 8, cost: 200 },
+            steelFactory: { name: "🏭 Steel Factory", material: "steel", materialName: "Steel", baseProduction: 3, cost: 500 },
+            oilRig: { name: "🛢️ Oil Rig", material: "oil", materialName: "Oil", baseProduction: 2, cost: 1000 },
+            ammoFactory: { name: "🔫 Ammo Factory", material: "ammo", materialName: "Ammo", baseProduction: 5, cost: 800 },
+            electronics: { name: "💻 Electronics Factory", material: "electronics", materialName: "Electronics", baseProduction: 2, cost: 1500 }
+        };
+        const armyUnitsList = {
+            soldier: { name: "🛡️ Soldier", attackPower: 50, coinsCost: 500, materials: { iron: 10, food: 5 } },
+            tank: { name: "🔫 Tank", attackPower: 500, coinsCost: 5000, materials: { steel: 20, oil: 10, iron: 30 } },
+            artillery: { name: "💣 Artillery", attackPower: 200, coinsCost: 2000, materials: { steel: 10, ammo: 15, iron: 20 } },
+            fighterJet: { name: "✈️ Fighter Jet", attackPower: 1000, coinsCost: 10000, materials: { steel: 30, oil: 20, electronics: 10 } },
+            battleship: { name: "⚓ Battleship", attackPower: 2000, coinsCost: 20000, materials: { steel: 50, oil: 30, electronics: 20, ammo: 30 } }
+        };
+        const marketMaterials = {
+            wood: { name: "🪵 Wood", basePrice: 10 }, iron: { name: "⛏️ Iron Ore", basePrice: 25 }, food: { name: "🌾 Food", basePrice: 8 }, stone: { name: "🪨 Stone", basePrice: 15 }, steel: { name: "🏭 Steel", basePrice: 50 }, oil: { name: "🛢️ Oil", basePrice: 100 }, ammo: { name: "🔫 Ammo", basePrice: 40 }, electronics: { name: "💻 Electronics", basePrice: 150 }
+        };
+
+        let currentPlayer = null, playerRef = null, marketPrices = {}, nextMarketResetTime = null, isAdminLoggedIn = false;
+        const ADMIN_PASSWORD = "9434538152";
+        const LOAN_INTEREST_RATE = 0.10;
+
+        // ======================= ALLIANCE SYSTEM =======================
+        async function loadAllianceInfo() {
+            if (!currentPlayer) return;
+            const playerSnap = await playerRef.once('value');
+            const playerData = playerSnap.val();
+            const allianceName = playerData.alliance;
+            const container = document.getElementById('currentAllianceDisplay');
+            if (!container) return;
+            if (!allianceName) {
+                container.innerHTML = `<div style="text-align:center; padding:10px;"><p>🚫 You are not in any alliance. Create or join one above!</p></div>`;
+                return;
+            }
+            const allianceRef = database.ref('alliances/' + allianceName.replace(/[.#$\[\]]/g, '_'));
+            const allianceSnap = await allianceRef.once('value');
+            if (!allianceSnap.exists()) {
+                await playerRef.child('alliance').remove();
+                container.innerHTML = `<div style="text-align:center; padding:10px;"><p>⚠️ Alliance no longer exists. You can join another.</p></div>`;
+                return;
+            }
+            const alliance = allianceSnap.val();
+            let membersList = '';
+            const membersObj = alliance.members || {};
+            const memberNames = Object.keys(membersObj);
+            if (memberNames.length === 0) membersList = '<li>No members</li>';
+            else {
+                memberNames.forEach(m => {
+                    membersList += `<li>${escapeHtml(m)} ${alliance.leader === m ? '👑 (Leader)' : ''}</li>`;
+                });
+            }
+            container.innerHTML = `
+                <div style="border-left: 4px solid #ffd700; padding-left: 15px;">
+                    <h3>🏰 ${escapeHtml(alliance.name)}</h3>
+                    <p><strong>👑 Leader:</strong> ${escapeHtml(alliance.leader)}</p>
+                    <p><strong>👥 Members (${memberNames.length}):</strong></p>
+                    <ul style="margin-left: 20px;">${membersList}</ul>
+                    <button onclick="leaveAlliance()" style="background:#dc3545; color:white; margin-top:10px; padding:6px 12px; border:none; border-radius:8px;">🚪 Leave Alliance</button>
+                </div>
+            `;
+        }
+
+        async function createAlliance() {
+            if (!currentPlayer) return;
+            const allianceName = document.getElementById('newAllianceName').value.trim();
+            const msgDiv = document.getElementById('createAllianceMsg');
+            if (!allianceName) { msgDiv.innerHTML = 'Enter alliance name.'; return; }
+            const playerSnap = await playerRef.once('value');
+            if (playerSnap.val().alliance) { msgDiv.innerHTML = 'You are already in an alliance. Leave first.'; return; }
+            const allianceKey = allianceName.replace(/[.#$\[\]]/g, '_');
+            const existing = await database.ref('alliances/' + allianceKey).once('value');
+            if (existing.exists()) { msgDiv.innerHTML = 'Alliance name already exists.'; return; }
+            const newAlliance = {
+                name: allianceName,
+                leader: currentPlayer,
+                members: { [currentPlayer]: true },
+                createdAt: Date.now()
+            };
+            await database.ref('alliances/' + allianceKey).set(newAlliance);
+            await playerRef.child('alliance').set(allianceName);
+            msgDiv.innerHTML = `<span style="color:#51cf66;">✅ Alliance "${allianceName}" created!</span>`;
+            document.getElementById('newAllianceName').value = '';
+            await loadAllianceInfo();
+            await database.ref('global_chat').push({ sender: "🌍 ALLIANCE", message: `${currentPlayer} created alliance "${allianceName}"!`, timestamp: Date.now(), time: new Date().toLocaleTimeString() });
+        }
+
+        async function joinAlliance() {
+            if (!currentPlayer) return;
+            const allianceName = document.getElementById('joinAllianceName').value.trim();
+            const msgDiv = document.getElementById('joinAllianceMsg');
+            if (!allianceName) { msgDiv.innerHTML = 'Enter alliance name.'; return; }
+            const playerSnap = await playerRef.once('value');
+            if (playerSnap.val().alliance) { msgDiv.innerHTML = 'You are already in an alliance. Leave first.'; return; }
+            const allianceKey = allianceName.replace(/[.#$\[\]]/g, '_');
+            const allianceRef = database.ref('alliances/' + allianceKey);
+            const allianceSnap = await allianceRef.once('value');
+            if (!allianceSnap.exists()) { msgDiv.innerHTML = 'Alliance not found.'; return; }
+            const alliance = allianceSnap.val();
+            if (alliance.members && alliance.members[currentPlayer]) { msgDiv.innerHTML = 'Already a member.'; return; }
+            await allianceRef.child('members/' + currentPlayer).set(true);
+            await playerRef.child('alliance').set(allianceName);
+            msgDiv.innerHTML = `<span style="color:#51cf66;">✅ Joined "${allianceName}"!</span>`;
+            document.getElementById('joinAllianceName').value = '';
+            await loadAllianceInfo();
+            await database.ref('global_chat').push({ sender: "🌍 ALLIANCE", message: `${currentPlayer} joined alliance "${allianceName}"!`, timestamp: Date.now(), time: new Date().toLocaleTimeString() });
+        }
+
+        async function leaveAlliance() {
+            if (!currentPlayer) return;
+            const playerSnap = await playerRef.once('value');
+            const allianceName = playerSnap.val().alliance;
+            if (!allianceName) { alert('You are not in an alliance.'); return; }
+            const allianceKey = allianceName.replace(/[.#$\[\]]/g, '_');
+            const allianceRef = database.ref('alliances/' + allianceKey);
+            const allianceSnap = await allianceRef.once('value');
+            if (!allianceSnap.exists()) {
+                await playerRef.child('alliance').remove();
+                alert('Alliance does not exist anymore.');
+                loadAllianceInfo();
+                return;
+            }
+            const alliance = allianceSnap.val();
+            if (alliance.leader === currentPlayer) {
+                if (confirm('You are the leader. Deleting alliance will disband it. Proceed?')) {
+                    await allianceRef.remove();
+                    await playerRef.child('alliance').remove();
+                    alert('Alliance disbanded.');
+                    await database.ref('global_chat').push({ sender: "🌍 ALLIANCE", message: `Alliance "${allianceName}" has been disbanded by leader ${currentPlayer}.`, timestamp: Date.now(), time: new Date().toLocaleTimeString() });
+                    loadAllianceInfo();
+                }
+                return;
+            }
+            await allianceRef.child('members/' + currentPlayer).remove();
+            await playerRef.child('alliance').remove();
+            alert(`Left ${allianceName}.`);
+            await database.ref('global_chat').push({ sender: "🌍 ALLIANCE", message: `${currentPlayer} left alliance "${allianceName}".`, timestamp: Date.now(), time: new Date().toLocaleTimeString() });
+            loadAllianceInfo();
+        }
+
+        // Listen for alliance changes for real-time update
+        function startAllianceListener() {
+            if (!playerRef) return;
+            playerRef.child('alliance').on('value', () => {
+                if (document.getElementById('alliance').classList.contains('active')) loadAllianceInfo();
+            });
+        }
+
+        // ======================= EXISTING FUNCTIONS (unchanged) =======================
+        const challengeTemplates = {
+            terrorist_attack: { name: "💣 Terrorist Attack", desc: "Pay or lose army units.", coinCost: 5000, materialCost: { ammo: 100, steel: 50 } },
+            industrial_blockade: { name: "🏭 Industrial Blockade", desc: "Production halted.", coinCost: 8000, materialCost: { oil: 150, steel: 80 } },
+            cyber_attack: { name: "💻 Cyber Attack", desc: "Pay or lose coins.", coinCost: 3000, materialCost: { electronics: 40 } }
+        };
+        async function triggerChallengeForCountry(countryName, challengeType) { /* unchanged */ const countryKey = countryName.replace(/[.#$\[\]]/g, '_'); if (!(await database.ref('players/' + countryKey).once('value')).exists()) return false; const template = challengeTemplates[challengeType]; const challengeId = Date.now() + Math.random(); await database.ref(`challenges/${countryKey}/${challengeId}`).set({ id: challengeId, type: challengeType, name: template.name, description: template.desc, coinCost: template.coinCost, materialCost: template.materialCost, expiryTime: Date.now() + 3600000, status: "active" }); await database.ref('global_chat').push({ sender: "🌍 CRISIS", message: `${countryName} faces ${template.name}!`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); return true; }
+        async function resolveWithCoins(challengeId) { /* unchanged */ const countryKey = currentPlayer.replace(/[.#$\[\]]/g, '_'); const challenge = (await database.ref(`challenges/${countryKey}/${challengeId}`).once('value')).val(); if (!challenge || challenge.status !== "active") return false; const player = (await playerRef.once('value')).val(); if (player.coins >= challenge.coinCost) { await playerRef.child('coins').set(player.coins - challenge.coinCost); await database.ref(`challenges/${countryKey}/${challengeId}`).remove(); await database.ref('global_chat').push({ sender: "🏆 RESOLVE", message: `${currentPlayer} resolved ${challenge.name}!`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); return true; } return false; }
+        async function resolveWithMaterials(challengeId) { /* unchanged */ const countryKey = currentPlayer.replace(/[.#$\[\]]/g, '_'); const challenge = (await database.ref(`challenges/${countryKey}/${challengeId}`).once('value')).val(); if (!challenge || challenge.status !== "active") return false; const player = (await playerRef.once('value')).val(); let has = true; for (let [mat, qty] of Object.entries(challenge.materialCost)) if ((player.inventory[mat] || 0) < qty) has = false; if (has) { for (let [mat, qty] of Object.entries(challenge.materialCost)) await playerRef.child(`inventory/${mat}`).set((player.inventory[mat] || 0) - qty); await database.ref(`challenges/${countryKey}/${challengeId}`).remove(); await database.ref('global_chat').push({ sender: "🏆 RESOLVE", message: `${currentPlayer} resolved ${challenge.name} with materials!`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); return true; } return false; }
+        async function loadActiveChallenges() { if (!currentPlayer) return; const container = document.getElementById('activeChallengesList'); if (!container) return; const snap = await database.ref(`challenges/${currentPlayer.replace(/[.#$\[\]]/g, '_')}`).once('value'); if (!snap.exists()) { container.innerHTML = '<p>✅ No active challenges.</p>'; return; } let html = ''; snap.forEach(item => { const ch = item.val(); if (ch.status !== "active") return; const timeLeft = Math.max(0, ch.expiryTime - Date.now()); const minutes = Math.floor(timeLeft / 60000), seconds = Math.floor((timeLeft % 60000) / 1000); let matReq = Object.entries(ch.materialCost).map(([m,q]) => `${q} ${marketMaterials[m]?.name}`).join(', '); html += `<div class="challenge-item"><h3>⚠️ ${ch.name}</h3><p>${ch.description}</p><div>💰 ${ch.coinCost} coins OR 📦 ${matReq}</div><div class="challenge-timer">⏳ ${minutes}m ${seconds}s</div><div style="display:flex; gap:10px;"><button class="btn-resolve" onclick="resolveWithCoins('${ch.id}')">Pay Coins</button><button class="btn-resolve" onclick="resolveWithMaterials('${ch.id}')">Pay Materials</button></div></div>`; }); container.innerHTML = html; }
+        window.resolveWithCoins = resolveWithCoins; window.resolveWithMaterials = resolveWithMaterials;
+        async function processOfflineProduction(player) { const now = Date.now(); if (player.blockadeUntil && now < player.blockadeUntil) { addWarMessage("system", "Production halted - blockade active!"); return false; } const lastProd = player.lastProductionTime || now; let hours = Math.min(24, Math.floor((now - lastProd) / 3600000)); if (hours <= 0) return false; let produced = {}; for (let k in buildingsList) { let lvl = player.buildings[k] || 0; if (lvl > 0) produced[buildingsList[k].material] = (produced[buildingsList[k].material] || 0) + (lvl * buildingsList[k].baseProduction * hours); } if (Object.keys(produced).length === 0) return false; let updates = { lastProductionTime: now }; for (let m in produced) updates[`inventory/${m}`] = (player.inventory[m] || 0) + produced[m]; await playerRef.update(updates); addWarMessage("system", `Produced ${Object.entries(produced).map(([m,q]) => `${q} ${marketMaterials[m]?.name}`).join(', ')} (${hours}h offline)`); return true; }
+        function addWarMessage(type, msg, ref = null) { (ref || playerRef)?.once('value', s => { let log = s.val()?.warLog || []; log.unshift({ type, message: msg, time: new Date().toLocaleTimeString() }); if (log.length > 20) log.pop(); (ref || playerRef).child('warLog').set(log); }); }
+        function switchAuthTab(tab) { document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.remove('active')); document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active')); if (tab === 'login') { document.querySelector('.auth-tab:first-child').classList.add('active'); document.getElementById('loginForm').classList.add('active'); } else { document.querySelector('.auth-tab:last-child').classList.add('active'); document.getElementById('signupForm').classList.add('active'); } }
+        async function signupUser() { const country = document.getElementById('signupCountry').value.trim(); const password = document.getElementById('signupPassword').value; if (!country || !password) { document.getElementById('signupMessage').innerHTML = '<p class="error-msg">Fill all fields!</p>'; return; } if (localStorage.getItem('registeredCountry')) { document.getElementById('signupMessage').innerHTML = '<p class="error-msg">You already have an account on this device! Only one country allowed.</p>'; return; } const authRef = database.ref('auth/' + country.replace(/[.#$\[\]]/g, '_')); if ((await authRef.once('value')).exists()) { document.getElementById('signupMessage').innerHTML = '<p class="error-msg">Country exists!</p>'; return; } await authRef.set({ password }); const playerData = { name: country, coins: 1000, buildings: {}, inventory: { wood: 0, iron: 0, food: 0, stone: 0, steel: 0, oil: 0, ammo: 0, electronics: 0 }, army: { soldier: 0, tank: 0, artillery: 0, fighterJet: 0, battleship: 0 }, loans: [], lastProductionTime: Date.now(), lastWarTime: 0, warLog: [], blockadeUntil: 0 }; for (let k in buildingsList) playerData.buildings[k] = 0; await database.ref('players/' + country.replace(/[.#$\[\]]/g, '_')).set(playerData); localStorage.setItem('registeredCountry', country); document.getElementById('signupMessage').innerHTML = '<p class="success-msg">Account created! Login.</p>'; switchAuthTab('login'); }
+        async function loginUser() { const country = document.getElementById('loginCountry').value.trim(); const password = document.getElementById('loginPassword').value; if (!country || !password) { document.getElementById('loginMessage').innerHTML = '<p class="error-msg">Fill fields!</p>'; return; } const authRef = database.ref('auth/' + country.replace(/[.#$\[\]]/g, '_')); const snap = await authRef.once('value'); if (!snap.exists() || snap.val().password !== password) { document.getElementById('loginMessage').innerHTML = '<p class="error-msg">Invalid credentials!</p>'; return; } currentPlayer = country; localStorage.setItem('loggedInCountry', currentPlayer); document.getElementById('authScreen').style.display = 'none'; document.getElementById('gameUI').style.display = 'block'; playerRef = database.ref('players/' + currentPlayer.replace(/[.#$\[\]]/g, '_')); const pSnap = await playerRef.once('value'); if (pSnap.exists()) await processOfflineProduction(pSnap.val()); startGame(); }
+        function initChat() { const chatRef = database.ref('global_chat'); const container = document.getElementById('chatMessages'); if (!container) return; chatRef.orderByChild('timestamp').on('value', (snapshot) => { if (!snapshot.exists()) { container.innerHTML = '<div style="text-align:center; opacity:0.6;">No messages yet. Be the first to chat!</div>'; return; } let messages = []; snapshot.forEach(child => { messages.push({ key: child.key, ...child.val() }); }); messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)); let html = ''; messages.forEach(msg => { if (!msg.message) return; const isSent = (msg.sender === currentPlayer); html += `<div class="chat-message ${isSent ? 'sent' : 'received'}"><div class="message-sender">${escapeHtml(msg.sender)}</div><div>${escapeHtml(msg.message)}</div><div class="message-time">${msg.time || ''}</div></div>`; }); container.innerHTML = html; container.scrollTop = container.scrollHeight; }); }
+        function sendChatMessage() { const input = document.getElementById('chatInput'); const msg = input.value.trim(); if (!msg || !currentPlayer) return; database.ref('global_chat').push({ sender: currentPlayer, message: msg, timestamp: Date.now(), time: new Date().toLocaleTimeString() }).then(() => { input.value = ''; }).catch(err => console.error("Chat error:", err)); }
+        function loadHelpCountryList() { database.ref('players').on('value', (snapshot) => { const select = document.getElementById('helpCountrySelect'); if (!select) return; let options = '<option value="">-- Select Country --</option>'; snapshot.forEach(child => { const p = child.val(); if (p.name !== currentPlayer) options += `<option value="${p.name}">${escapeHtml(p.name)}</option>`; }); select.innerHTML = options; }); }
+        function updateHelpResourceLabel() { const type = document.getElementById('helpResourceType').value; const infoDiv = document.getElementById('helpResourceInfo'); infoDiv.innerHTML = type === 'coins' ? '💰 You will send coins from your treasury.' : `📦 You will send ${marketMaterials[type]?.name || type} from your inventory.`; }
+        async function sendHelp() { const targetCountry = document.getElementById('helpCountrySelect').value; const resourceType = document.getElementById('helpResourceType').value; const quantity = parseInt(document.getElementById('helpQuantity').value); if (!targetCountry || isNaN(quantity) || quantity <= 0) { document.getElementById('helpStatus').innerHTML = '<p class="error-msg">Invalid input.</p>'; return; } if (targetCountry === currentPlayer) { document.getElementById('helpStatus').innerHTML = '<p class="error-msg">Cannot send to yourself.</p>'; return; } const senderSnap = await playerRef.once('value'); const sender = senderSnap.val(); if (resourceType === 'coins') { if (sender.coins < quantity) { document.getElementById('helpStatus').innerHTML = `<p class="error-msg">Not enough coins.</p>`; return; } } else { if ((sender.inventory[resourceType] || 0) < quantity) { document.getElementById('helpStatus').innerHTML = `<p class="error-msg">Not enough ${marketMaterials[resourceType]?.name}.</p>`; return; } } const targetRef = database.ref('players/' + targetCountry.replace(/[.#$\[\]]/g, '_')); const targetSnap = await targetRef.once('value'); if (!targetSnap.exists()) { document.getElementById('helpStatus').innerHTML = '<p class="error-msg">Recipient not found.</p>'; return; } if (resourceType === 'coins') { await playerRef.child('coins').set(sender.coins - quantity); await targetRef.child('coins').set(targetSnap.val().coins + quantity); addWarMessage("system", `Sent ${quantity} coins to ${targetCountry}`); await database.ref('global_chat').push({ sender: "🤝 HELP", message: `${currentPlayer} sent ${quantity} coins to ${targetCountry}`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); } else { const newSender = (sender.inventory[resourceType] || 0) - quantity; await playerRef.child(`inventory/${resourceType}`).set(newSender); const newTarget = (targetSnap.val().inventory[resourceType] || 0) + quantity; await targetRef.child(`inventory/${resourceType}`).set(newTarget); addWarMessage("system", `Sent ${quantity} ${marketMaterials[resourceType]?.name} to ${targetCountry}`); await database.ref('global_chat').push({ sender: "🤝 HELP", message: `${currentPlayer} sent ${quantity} ${marketMaterials[resourceType]?.name} to ${targetCountry}`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); } document.getElementById('helpStatus').innerHTML = '<p class="success-msg">✅ Help sent!</p>'; document.getElementById('helpQuantity').value = ''; setTimeout(() => document.getElementById('helpStatus').innerHTML = '', 3000); }
+        function loginAdmin() { let pwd = document.getElementById('adminPassword').value; if (pwd === ADMIN_PASSWORD) { isAdminLoggedIn = true; document.getElementById('adminLoginPanel').style.display = 'none'; document.getElementById('adminPanel').classList.add('active'); loadAdminLists(); document.getElementById('adminLoginError').innerHTML = '<p class="success-msg">✅ Logged in!</p>'; } else document.getElementById('adminLoginError').innerHTML = '<p class="error-msg">Wrong password!</p>'; }
+        async function confirmResetDatabase() { if (!isAdminLoggedIn) { alert("Admin not logged in!"); return; } if (confirm("⚠️ WARNING: This will DELETE ALL players, chats, challenges, market data. All progress lost. Are you ABSOLUTELY sure?")) { if (prompt("Type 'RESET' to confirm:") === "RESET") { await database.ref('players').remove(); await database.ref('auth').remove(); await database.ref('challenges').remove(); await database.ref('market_prices').remove(); await database.ref('global_chat').remove(); await database.ref('alliances').remove(); localStorage.clear(); alert("✅ Database reset! Refresh to start fresh."); location.reload(); } else alert("Reset cancelled."); } }
+        function loadAdminLists() { database.ref('players').on('value', (s) => { let opts = '<option value="">Select</option>'; let nationsHtml = ''; s.forEach(ch => { let p = ch.val(); opts += `<option value="${p.name}">${p.name}</option>`; nationsHtml += `<div class="leader-item"><span>${p.name}</span><span>💰${Math.floor(p.coins)}</span></div>`; }); document.getElementById('adminCountrySelect').innerHTML = opts; document.getElementById('adminArmyCountry').innerHTML = opts; document.getElementById('adminRemoveCountry').innerHTML = opts; document.getElementById('adminChallengeCountry').innerHTML = opts; document.getElementById('adminNationsList').innerHTML = nationsHtml || '<p>No nations yet.</p>'; }); }
+        function adminGiveResources() { if (!isAdminLoggedIn) return; let c = document.getElementById('adminCountrySelect').value; let coins = parseInt(document.getElementById('adminCoins').value) || 0; let mat = document.getElementById('adminMaterialSelect').value; let qty = parseInt(document.getElementById('adminMaterialQty').value) || 0; if (!c) { document.getElementById('adminStatus').innerHTML = '<p class="error-msg">Select country</p>'; return; } let ref = database.ref('players/' + c.replace(/[.#$\[\]]/g, '_')); ref.once('value', (s) => { if (s.exists()) { let updates = {}; if (coins > 0) updates.coins = s.val().coins + coins; if (mat && qty > 0 && marketMaterials[mat]) updates[`inventory/${mat}`] = (s.val().inventory?.[mat] || 0) + qty; ref.update(updates); document.getElementById('adminStatus').innerHTML = `<p class="success-msg">✅ Given ${coins} coins${mat ? ` and ${qty} ${mat}` : ''} to ${c}</p>`; } else document.getElementById('adminStatus').innerHTML = '<p class="error-msg">Not found</p>'; }); }
+        function adminAddArmy() { if(!isAdminLoggedIn)return; let c=document.getElementById('adminArmyCountry').value; let u=document.getElementById('adminArmyUnit').value; let qty=parseInt(document.getElementById('adminArmyQty').value)||0; if(c&&u&&qty) database.ref('players/'+c.replace(/[.#$\[\]]/g,'_')).child(`army/${u}`).transaction(v=>(v||0)+qty); }
+        function adminRemoveNation() { if(!isAdminLoggedIn)return; let c=document.getElementById('adminRemoveCountry').value; if(c&&confirm(`Delete ${c}?`)) database.ref('players/'+c.replace(/[.#$\[\]]/g,'_')).remove(); }
+        async function adminTriggerChallenge() { if(!isAdminLoggedIn)return; let c=document.getElementById('adminChallengeCountry').value; let t=document.getElementById('adminChallengeType').value; if(c&&t) await triggerChallengeForCountry(c,t); }
+        async function applyTaxToAll() { if (!isAdminLoggedIn) { document.getElementById('taxStatus').innerHTML = '<p class="error-msg">Admin not logged in!</p>'; return; } let tax = parseFloat(document.getElementById('taxPercentage').value); if (isNaN(tax) || tax < 0 || tax > 100) { document.getElementById('taxStatus').innerHTML = '<p class="error-msg">Invalid percentage (0-100)</p>'; return; } const playersSnap = await database.ref('players').once('value'); let updates = []; playersSnap.forEach(child => { let playerData = child.val(); let deduction = Math.floor(playerData.coins * (tax / 100)); if (deduction > 0) { let newCoins = Math.max(0, playerData.coins - deduction); updates.push(database.ref('players/' + child.key).child('coins').set(newCoins)); } }); await Promise.all(updates); await database.ref('global_chat').push({ sender: "👑 ADMIN", message: `💰 TAX: ${tax}% deducted from all nations.`, timestamp: Date.now(), time: new Date().toLocaleTimeString() }); document.getElementById('taxStatus').innerHTML = `<p class="success-msg">✅ Tax of ${tax}% applied to all nations!</p>`; setTimeout(() => document.getElementById('taxStatus').innerHTML = '', 4000); }
+        function startGame() { loadPlayerData(); startProductionChecker(); startTimer(); loadMarketData(); startMarketUpdater(); loadLeadersBoard(); initChat(); loadAllPlayersForWar(); startLoanChecker(); startWarCooldownUpdater(); loadHelpCountryList(); setInterval(loadActiveChallenges, 5000); startAllianceListener(); setInterval(() => { if(document.getElementById('alliance').classList.contains('active')) loadAllianceInfo(); }, 3000); }
+        function loadPlayerData() { playerRef.on('value', (snap) => { if(snap.exists()) updateUI(snap.val()); }); }
+        function updateUI(p) { document.getElementById('displayCoins').innerHTML = Math.floor(p.coins).toLocaleString(); let b=0; for(let k in p.buildings) b+=p.buildings[k]; document.getElementById('displayBuildings').innerHTML=b; let a=0; for(let k in p.army) a+=p.army[k]; document.getElementById('displayArmy').innerHTML=a.toLocaleString(); let m=0; for(let k in p.inventory) m+=p.inventory[k]; document.getElementById('displayMaterials').innerHTML=m.toLocaleString(); let prod=0; for(let k in p.buildings) prod+=p.buildings[k]*(buildingsList[k]?.baseProduction||0); document.getElementById('displayProduction').innerHTML=prod.toLocaleString(); let pow=0; for(let k in p.army) pow+=p.army[k]*(armyUnitsList[k]?.attackPower||0); document.getElementById('displayPower').innerHTML=pow.toLocaleString(); let loan=0; if(p.loans) for(let l of p.loans) if(!l.repaid) loan+=l.totalAmount; document.getElementById('displayLoan').innerHTML=loan.toLocaleString(); let lastWar=p.lastWarTime||0; let rem=(lastWar+86400000)-Date.now(); document.getElementById('warCooldown').innerHTML=rem>0?`${Math.floor(rem/3600000)}h ${Math.floor((rem%3600000)/60000)}m`:"Ready!"; updateBuildingsList(p); updateInventoryList(p); updateArmyList(p); updateWarLog(p.warLog||[]); updateLoansList(p); }
+        function updateBuildingsList(p) { let c=document.getElementById('buildingsList'); if(!c)return; let html=''; for(let k in buildingsList){ let b=buildingsList[k]; let lvl=p.buildings[k]||0; let cost=b.cost*(lvl+1); html+=`<div class="card"><h3>${b.name}</h3><div>Level: ${lvl}</div><div>Produces: ${lvl*b.baseProduction}/h</div><button class="btn-build" onclick="buildBuilding('${k}')" ${p.coins<cost?'disabled':''}>Upgrade (${cost})</button></div>`;} c.innerHTML=html; }
+        function buildBuilding(k){ playerRef.once('value',(s)=>{ let p=s.val(); let lvl=p.buildings[k]||0; let cost=buildingsList[k].cost*(lvl+1); if(p.coins>=cost){ playerRef.child('buildings/'+k).set(lvl+1); playerRef.child('coins').set(p.coins-cost); addWarMessage("system",`Upgraded ${buildingsList[k].name}`); } }); }
+        function updateInventoryList(p){ let c=document.getElementById('inventoryList'); if(!c)return; let html=''; for(let m in marketMaterials){ let amt=p.inventory[m]||0; let price=marketPrices[m]||marketMaterials[m].basePrice; html+=`<div class="card"><h3>${marketMaterials[m].name}</h3><div>${amt}</div><div>Price: ${Math.floor(price)}</div><button onclick="sellMaterial('${m}',${price})" ${amt===0?'disabled':''}>Sell All</button></div>`;} c.innerHTML=html; }
+        function sellMaterial(mat,price){ playerRef.once('value',(s)=>{ let p=s.val(); let amt=p.inventory[mat]||0; if(amt>0){ playerRef.child('inventory/'+mat).set(0); playerRef.child('coins').set(p.coins+amt*price); addWarMessage("system",`Sold ${amt} ${mat}`); } }); }
+        function updateArmyList(p){ let c=document.getElementById('armyList'); if(!c)return; let html=''; for(let k in armyUnitsList){ let u=armyUnitsList[k]; let cnt=p.army[k]||0; let can=p.coins>=u.coinsCost; html+=`<div class="card"><h3>${u.name}</h3><div>Owned: ${cnt}</div><div>Power: ${u.attackPower}</div><button class="btn-train" onclick="trainUnit('${k}')" ${!can?'disabled':''}>Train (${u.coinsCost})</button></div>`;} c.innerHTML=html; }
+        function trainUnit(k){ playerRef.once('value',(s)=>{ let p=s.val(); let u=armyUnitsList[k]; if(p.coins>=u.coinsCost){ playerRef.child('coins').set(p.coins-u.coinsCost); playerRef.child('army/'+k).set((p.army[k]||0)+1); addWarMessage("system",`Trained ${u.name}`); } }); }
+        function updateWarLog(log){ let c=document.getElementById('warLog'); if(!c)return; c.innerHTML=log.map(l=>`<div class="war-message ${l.type}">[${l.time}] ${l.message}</div>`).join('')||'<p>No events.</p>'; }
+        async function collectProduction() { const snap=await playerRef.once('value'); if(snap.exists()) await processOfflineProduction(snap.val()); }
+        function startProductionChecker(){ setInterval(async()=>{ if(playerRef){ const snap=await playerRef.once('value'); if(snap.exists()) await processOfflineProduction(snap.val()); } },60000); }
+        function startTimer(){ setInterval(()=>{ if(playerRef){ playerRef.once('value',s=>{ if(s.exists()){ let next=(s.val().lastProductionTime||Date.now())+3600000; let rem=next-Date.now(); document.getElementById('productionTimer').innerHTML=rem>0?`⏰ ${Math.floor(rem/60000)}m ${Math.floor((rem%60000)/1000)}s`:"🏭 Ready!"; } }); } },1000); }
+        function loadMarketData(){ database.ref('market_prices').on('value',(s)=>{ if(s.exists()){ marketPrices=s.val().prices||{}; nextMarketResetTime=s.val().nextResetTime||Date.now()+3600000; } else initializeMarket(); updateMarketUI(); }); }
+        function initializeMarket(){ for(let m in marketMaterials) marketPrices[m]=marketMaterials[m].basePrice; nextMarketResetTime=Date.now()+3600000; saveMarketData(); }
+        function saveMarketData(){ database.ref('market_prices').set({prices:marketPrices,nextResetTime:nextMarketResetTime}); }
+        function startMarketUpdater(){ setInterval(()=>{ if(Date.now()>=nextMarketResetTime) resetMarketPrices(); updateMarketTimer(); },1000); }
+        function resetMarketPrices(){ for(let m in marketMaterials){ let change=(Math.random()-0.5)*0.6; let np=marketPrices[m]*(1+change); marketPrices[m]=Math.floor(Math.min(500,Math.max(5,np))); } nextMarketResetTime=Date.now()+3600000; saveMarketData(); updateMarketUI(); }
+        function updateMarketUI(){ let c=document.getElementById('marketGrid'); if(!c)return; let h=''; for(let m in marketMaterials){ h+=`<div class="market-card"><h3>${marketMaterials[m].name}</h3><div class="market-price">💰 ${Math.floor(marketPrices[m]||marketMaterials[m].basePrice)}</div></div>`;} c.innerHTML=h; }
+        function updateMarketTimer(){ let el=document.getElementById('marketTimer'); if(el){ let rem=nextMarketResetTime-Date.now(); el.innerHTML=rem>0?`Next reset: ${Math.floor(rem/60000)}m ${Math.floor((rem%60000)/1000)}s`:"Resetting..."; } }
+        function loadAllPlayersForWar(){ database.ref('players').on('value',(s)=>{ let c=document.getElementById('attackList'); if(!c)return; let html=''; s.forEach(ch=>{ let p=ch.val(); if(p.name!==currentPlayer) html+=`<div class="leader-item"><span>${p.name}</span><span>💰${Math.floor(p.coins)}</span><button class="btn-attack" onclick="declareWar('${p.name}')">Attack</button></div>`;}); c.innerHTML=html; }); }
+        function declareWar(enemy){ playerRef.once('value',(s)=>{ let p=s.val(); if(Date.now()-(p.lastWarTime||0)<86400000){ addWarMessage("system","Cooldown!"); return; } let eRef=database.ref('players/'+enemy.replace(/[.#$\[\]]/g,'_')); eRef.once('value',(eSnap)=>{ let d=eSnap.val(); if(Math.random()>0.5){ let stolen=Math.floor(d.coins*0.2); playerRef.child('coins').set(p.coins+stolen); eRef.child('coins').set(Math.max(0,d.coins-stolen)); addWarMessage("win",`Victory! Stole ${stolen} coins!`); } else { let lost=Math.floor(p.coins*0.1); playerRef.child('coins').set(Math.max(0,p.coins-lost)); addWarMessage("loss",`Defeat! Lost ${lost} coins!`); } playerRef.child('lastWarTime').set(Date.now()); }); }); }
+        function loadLeadersBoard(){ database.ref('players').on('value',(s)=>{ let c=document.getElementById('leadersList'); if(!c)return; let players=[]; s.forEach(ch=>players.push(ch.val())); players.sort((a,b)=>b.coins-a.coins); c.innerHTML=players.slice(0,20).map((p,i)=>`<div class="leader-item">#${i+1} ${p.name} 💰${Math.floor(p.coins)}</div>`).join('') || '<p>No countries yet.</p>'; }); }
+        function startLoanChecker(){ setInterval(()=>{ database.ref('players').once('value',(s)=>{ s.forEach(ch=>{ let p=ch.val(); let loans=p.loans||[]; let updated=false; for(let l of loans){ if(!l.repaid && Date.now()>l.dueDate){ let penalty=Math.floor(l.remaining*0.2); database.ref('players/'+ch.key).child('coins').set(Math.max(0,(p.coins||0)-penalty)); l.repaid=true; updated=true; } } if(updated) database.ref('players/'+ch.key).child('loans').set(loans); }); }); },3600000); }
+        function startWarCooldownUpdater(){ setInterval(()=>{ playerRef.once('value',(s)=>{ let p=s.val(); let rem=(p.lastWarTime+86400000)-Date.now(); document.getElementById('warCooldown').innerHTML=rem>0?`${Math.floor(rem/3600000)}h ${Math.floor((rem%3600000)/60000)}m`:"Ready!"; }); },60000); }
+        function updateLoanPreview(){ let amt=parseInt(document.getElementById('loanAmount').value)||0; let days=parseInt(document.getElementById('loanDays').value)||0; if(amt>0&&days>0) document.getElementById('loanPreview').innerHTML=`Interest: ${Math.floor(amt*0.1)}<br>Total: ${Math.floor(amt*1.1)}`; else document.getElementById('loanPreview').innerHTML=''; }
+        function takeLoan(){ let amt=parseInt(document.getElementById('loanAmount').value); let days=parseInt(document.getElementById('loanDays').value); if(!amt||!days||amt<1000||amt>250000||days<1||days>10)return; playerRef.once('value',(s)=>{ let p=s.val(); let totalLoan=0; for(let l of (p.loans||[])) if(!l.repaid) totalLoan+=l.totalAmount; if(totalLoan+amt>250000)return; let interest=Math.floor(amt*0.1); let total=amt+interest; let newLoan={id:Date.now(),principal:amt,interest,totalAmount:total,remaining:total,takenDate:Date.now(),dueDate:Date.now()+(days*86400000),repaid:false}; let loans=p.loans||[]; loans.push(newLoan); playerRef.child('loans').set(loans); playerRef.child('coins').set(p.coins+amt); document.getElementById('loanStatus').innerHTML=`Loan of ${amt} taken!`; setTimeout(()=>document.getElementById('loanStatus').innerHTML='',3000); }); }
+        function updateLoansList(p){ let c=document.getElementById('activeLoansList'); if(!c)return; let active=(p.loans||[]).filter(l=>!l.repaid); if(active.length===0){c.innerHTML='<p>No loans.</p>';return;} let html=''; for(let l of active){ html+=`<div class="loan-item"><div>${l.principal} + ${l.interest} = ${l.totalAmount}<br>Due: ${new Date(l.dueDate).toLocaleDateString()}</div><button class="repay-btn" onclick="repayLoan(${l.id})">Repay (${l.remaining})</button></div>`;} c.innerHTML=html; }
+        function repayLoan(id){ playerRef.once('value',(s)=>{ let p=s.val(); let loans=p.loans||[]; let idx=loans.findIndex(l=>l.id===id); if(idx===-1||loans[idx].repaid)return; let loan=loans[idx]; if(p.coins>=loan.remaining){ loans[idx].repaid=true; playerRef.child('loans').set(loans); playerRef.child('coins').set(p.coins-loan.remaining); addWarMessage("system","Loan repaid!"); } }); }
+        function showView(v){ document.querySelectorAll('.view').forEach(vw=>vw.classList.remove('active')); document.getElementById(v).classList.add('active'); document.querySelectorAll('.nav button').forEach(btn=>btn.classList.remove('active')); document.getElementById(v+'Nav').classList.add('active'); if(v === 'alliance') loadAllianceInfo(); }
+        function escapeHtml(t){ if(!t) return ''; let div=document.createElement('div'); div.textContent=t; return div.innerHTML; }
+
+        document.getElementById('loanAmount')?.addEventListener('input', updateLoanPreview);
+        document.getElementById('loanDays')?.addEventListener('input', updateLoanPreview);
+        document.getElementById('helpResourceType')?.addEventListener('change', updateHelpResourceLabel);
+        window.buildBuilding = buildBuilding; window.trainUnit = trainUnit; window.declareWar = declareWar; window.collectProduction = collectProduction; window.sendHelp = sendHelp; window.repayLoan = repayLoan; window.takeLoan = takeLoan;
+        window.createAlliance = createAlliance; window.joinAlliance = joinAlliance; window.leaveAlliance = leaveAlliance;
+    </script>
+</body>
+</html>
